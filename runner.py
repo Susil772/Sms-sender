@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+import os#!/usr/bin/env python3
 """OTP Bomb Runner - Python (zero deps, 30 workers, ~8s/round)
    Usage: python runner.py 017XXXXXXXX 5
       or: python runner.py --server [--port 8080]
