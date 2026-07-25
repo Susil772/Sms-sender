@@ -9,6 +9,10 @@ from urllib.parse import parse_qs, urlparse, quote as urlquote
 import urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
 
 UA = ("Mozilla/5.0 (Linux; Android 11; Infinix X665B Build/RP1A.200720.011; wv) "
       "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/150.0.7871.124 Mobile Safari/537.36")
@@ -514,7 +518,7 @@ Usage:  http://YOUR_IP:{port}/?phone=017XXXXXXXX&rounds=5
 APIs:   {len(APIS)} total
 Workers: {MAX_WORKERS} threads
 """)
-    server = HTTPServer(('0.0.0.0', port), Handler)
+    server = ThreadingHTTPServer(('0.0.0.0', port), Handler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
