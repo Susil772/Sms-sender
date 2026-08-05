@@ -4,7 +4,7 @@
       or: python runner.py --server [--port 8080]
 """
 
-import sys, os, json, random, hashlib, time, ssl, string, threading, subprocess
+import sys, os, json, random, hashlib, time, ssl, string, threading
 from urllib.parse import parse_qs, urlparse, quote as urlquote
 import urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -27,14 +27,6 @@ CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
 
-# Load proxies
-PROXIES = []
-try:
-    with open('proxy.txt') as f:
-        PROXIES = [l.strip() for l in f if l.strip() and l.strip().startswith('socks5://')]
-except:
-    PROXIES = []
-
 def rn(): return random.choice(FN), random.choice(LN)
 def re(): return f"{''.join(random.choice(EC) for _ in range(random.randint(6,10)))}@{random.choice(DM)}"
 def rp(): return ''.join(random.choice(PC) for _ in range(random.randint(8,12)))
@@ -55,42 +47,11 @@ def fmt_phone(raw):
         pr = raw if raw.startswith('0') else '0' + raw
     return {'raw': pr, 'p880': p8, 'plus': '+' + p8, 'dash': '+88-' + pr}
 
-def _curl(url, method='GET', data=None, headers=None, timeout=3, proxy=None):
-    """Use curl subprocess for SOCKS5 proxy support"""
-    cmd = ['curl', '-s', '-X', method, '--max-time', str(timeout), '--connect-timeout', '2']
-    if proxy:
-        cmd += ['--socks5', proxy]
-    if headers:
-        for k, v in headers.items():
-            cmd += ['-H', f'{k}: {v}']
-    if data:
-        cmd += ['--data', data]
-    cmd.append(url)
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout+2)
-        return result.stdout, result.returncode
-    except subprocess.TimeoutExpired:
-        return '', 0
-    except:
-        return '', 0
-
-def http_get(url, headers=None, timeout=3, proxy=None):
-    if proxy or PROXIES:
-        p = proxy or (random.choice(PROXIES) if PROXIES else None)
-        out, code = _curl(url, 'GET', None, headers, timeout, p)
-        if code == 0 and out is not None:
-            return out
-        # fallback to direct
+def http_get(url, headers=None, timeout=4):
     req = urllib.request.Request(url, headers=headers or {}, method='GET')
     return urllib.request.urlopen(req, context=CTX, timeout=timeout).read().decode(errors='ignore')
 
-def http_post(url, data=None, headers=None, timeout=3, proxy=None):
-    if proxy or PROXIES:
-        p = proxy or (random.choice(PROXIES) if PROXIES else None)
-        out, code = _curl(url, 'POST', data, headers, timeout, p)
-        if code == 0 and out is not None:
-            return out
-        # fallback to direct
+def http_post(url, data=None, headers=None, timeout=4):
     b = data.encode() if isinstance(data, str) else data
     req = urllib.request.Request(url, data=b, headers=headers or {}, method='POST')
     return urllib.request.urlopen(req, context=CTX, timeout=timeout).read().decode(errors='ignore')
@@ -100,7 +61,7 @@ def preflight(url, extra_hdrs=None):
     if extra_hdrs:
         h.update(extra_hdrs)
     try:
-        return http_get(url, h, 3)
+        return http_get(url, h, 4)
     except:
         return ''
 
@@ -572,7 +533,7 @@ APIS = [
     'suzuki','biddabari','karobar','packly','carrybee_verify','carrybee_register','eziclick','livemcq','timezonebd','shaddho','udvash','amarbay','rhombus','toffee','apcom','ieducation','brritto','edgecourse','shopbase','jamakapor','quizbd','shukhee','smartsohay','shikhosms','walifier'
 ]
 
-MAX_WORKERS = 80
+MAX_WORKERS = 50
 
 try:
     from flask import Flask, request, jsonify
@@ -587,9 +548,9 @@ def call_api(api, phone):
     t0 = time.time()
     try:
         if req['method'] == 'GET':
-            http_get(req['url'], req['headers'], 3)
+            http_get(req['url'], req['headers'], 5)
         else:
-            http_post(req['url'], req['body'], req['headers'], 3)
+            http_post(req['url'], req['body'], req['headers'], 5)
         status = 200
     except urllib.error.HTTPError as e:
         status = e.code
